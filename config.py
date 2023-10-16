@@ -2,7 +2,7 @@
 
 inputs = {}
 
-inputs["Input-name"] = "./input-data/file-name.csv"
+inputs["WorldPop_1km_raster"] = "./input-data/lka_ppp_2020_1km_Aggregated_UNadj.tif" #1km Unconstrained Worldpop data
 
 
 outputs = {}
