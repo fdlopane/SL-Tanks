@@ -13,6 +13,7 @@ print("Program started at: ", now.strftime("%H:%M:%S"), "(London time)")
 
 from config import *
 from globals import *
+import geocomputation as gcpt
 
 print("All packages imported")
 ########################################################################################################################
@@ -45,22 +46,18 @@ dist_filename = ['01_Ampara',
 ########################################################################################################################
 # Preprocessing of the 1km Unconstrained Worldpop data to be 100m resolution
 
-"""
-#TODO: need to transform the following code in pure python (without QGIS)
-# Resample the 1km population file to a 100m grid.
-# Note: it copies the values over for each 100m grid cell
-processing.run("grass7:r.resample", {'input':inputs["WorldPop_1km_raster"],
-                                     'output':'TEMPORARY_OUTPUT',
-                                     'GRASS_REGION_PARAMETER':'79.647916363,81.877916354,5.918750178,9.835416829 [EPSG:4326]',
-                                     'GRASS_REGION_CELLSIZE_PARAMETER':0.0008983,
-                                     'GRASS_RASTER_FORMAT_OPT':'',
-                                     'GRASS_RASTER_FORMAT_META':''})
+# Resample the Worlpop raster from 1km resolution to 100m
+# Define inputs for resampling function:
+input_raster_path = inputs["WorldPop_1km_raster"]
+output_raster_path = Resampled_pop_raster
+x_resolution = 0.0008983 # 100m in degrees
+y_resolution = 0.0008983 # 100m in degrees
 
-#convert pixels to points
-processing.run("native:pixelstopoints", {'INPUT_RASTER':'/private/var/folders/dj/b71b_bsj1fjgr9t6wy_dt0m40000gn/T/processing_tvulde/36a299cdbea44ae58f07577f5df3f201/output.tif',
-                                         'RASTER_BAND':1,
-                                         'FIELD_NAME':'pop_at_1km_in_100m',
-                                         'OUTPUT':'/Users/sophieayling/Library/CloudStorage/OneDrive-UniversityCollegeLondon/GitHub/SriLanka/08_Data/map_intermediate/WorldPop/resampling/1km_to_100m_resampled.shp'})
+if not os.path.isfile(output_raster_path):
+    gcpt.resample_raster(input_raster_path, output_raster_path, x_resolution, y_resolution) # function from geocomputation module
+    print("Raster resampling completed.")
 
-# 2. We then divide the 1km population by 100 so that each 100m grid cell has a population
-"""
+# Convert the 100m WoldPop raster to a point shapefile:
+if not os.path.isfile(pop_points_shp):
+    pop_points_gdf = gcpt.raster_to_shp(Resampled_pop_raster, pop_points_shp, 'pop_count')
+    print('Worldpop raster converted into points')
