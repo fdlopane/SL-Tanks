@@ -62,3 +62,6 @@ if not os.path.isfile(output_raster_path):
 if not os.path.isfile(pop_points_shp):
     pop_points_gdf = gcpt.raster_to_shp(Resampled_pop_raster, pop_points_shp, 'pop_count')
     print('WorldPop raster converted into points')
+
+now = datetime.datetime.now(tz_London)
+print("Program finished at: ", now.strftime("%H:%M:%S"), "(London time)")
