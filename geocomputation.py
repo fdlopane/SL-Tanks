@@ -13,7 +13,7 @@ def resample_raster(input_path, output_path, x_resolution, y_resolution):
     with rasterio.open(input_path) as src:
         # Define the resampling method (e.g., cubic for cubic convolution)
         # Resampling documentation: https://rasterio.readthedocs.io/en/stable/topics/resampling.html
-        resampling_method = Resampling.bilinear
+        resampling_method = Resampling.nearest
 
         # Set the desired resolution
         target_resolution = (x_resolution, y_resolution)  # Set your desired resolution here
@@ -73,6 +73,9 @@ def raster_to_shp(input_raster, output_shp, field_name:str):
 
     # Remove the negative values:
     gdf_pop = gdf_pop[gdf_pop[field_name] > 0]
+
+    # Convert values to integers and divide by 100 (because of change of resolution):
+    gdf_pop[field_name] = gdf_pop[field_name]/100
 
     gdf_pop.to_feather(output_shp)
 

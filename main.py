@@ -61,4 +61,4 @@ if not os.path.isfile(output_raster_path):
 # Convert the 100m WoldPop raster to a point shapefile:
 if not os.path.isfile(pop_points_shp):
     pop_points_gdf = gcpt.raster_to_shp(Resampled_pop_raster, pop_points_shp, 'pop_count')
-    print('Worldpop raster converted into points')
+    print('WorldPop raster converted into points')
