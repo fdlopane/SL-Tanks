@@ -11,12 +11,15 @@ import pytz
 tz_London = pytz.timezone('Europe/London')
 now = datetime.datetime.now(tz_London)
 print("Program started at: ", now.strftime("%H:%M:%S"), "(London time)")
+print()
 
 from config import *
 from globals import *
 import geocomputation as gcpt
+import geopandas as gpd
 
 print("All packages imported")
+print()
 ########################################################################################################################
 # List of Sri Lanka district names:
 dist_filename = ['01_Ampara',
@@ -57,11 +60,56 @@ y_resolution = 0.0008983 # 100m in degrees
 if not os.path.isfile(output_raster_path):
     gcpt.resample_raster(input_raster_path, output_raster_path, x_resolution, y_resolution)
     print("Raster resampling completed.")
+    print()
 
 # Convert the 100m WoldPop raster to a point shapefile:
 if not os.path.isfile(pop_points_shp):
-    pop_points_gdf = gcpt.raster_to_shp(Resampled_pop_raster, pop_points_shp, 'pop_count')
+    pop_points_gdf = gcpt.raster_to_shp_point(Resampled_pop_raster, pop_points_shp, 'pop_count')
     print('WorldPop raster converted into points')
+    print()
 
+########################################################################################################################
+# CREATION OF GHSL LAYER
+
+# Create the GHSL layer ready to be joined by location (attributes) with 100m population points
+# Merge together the components of the GHSL layer
+
+# List of GHSL inputs
+ghsl_to_merge = [inputs["GHSL_raw_1"], inputs["GHSL_raw_2"], inputs["GHSL_raw_3"], inputs["GHSL_raw_4"]]
+
+if not os.path.isfile(ghsl_merged):
+    print('Merging GHSL input layers...')
+    print()
+    gcpt.merge_raster_files(ghsl_to_merge, ghsl_merged)
+    print('GHSL inputs merged into a single raster file.\n')
+    print()
+
+# Convert crs of merged sri lanka file:
+if not os.path.isfile(ghsl_merged_wgs84):
+    st_crs = 'EPSG:4326' # WGS84 projection
+    gcpt.reproject_raster(ghsl_merged, st_crs, ghsl_merged_wgs84)
+    print('GHSL raster converted to CRS EPSG:4326.\n')
+    print()
+
+# Now clip the shape to sri lanka boundaries:
+
+# Read in vector boundaries
+districts_shp = gpd.read_file(inputs["SL_Districts"])
+
+if not os.path.isfile(ghsl_merged_clipped):
+    gcpt.clip_raster_file(ghsl_merged_wgs84, districts_shp, ghsl_merged_clipped)
+    print('GHSL raster clipped to state boundaries and exported as .tif.\n')
+    print()
+
+# Transform the raster GHSL layer into a polygon
+if not os.path.isfile(ghsl_poly):
+    target_classes = [11, 12, 13, 21] # Target classes value to be filtered out during shp creation
+    gcpt.raster_to_shp_poly(ghsl_merged_clipped, ghsl_poly, target_classes, dissolve=True)
+    print('GHSL polygon layer created.')
+    print()
+
+
+
+########################################################################################################################
 now = datetime.datetime.now(tz_London)
 print("Program finished at: ", now.strftime("%H:%M:%S"), "(London time)")

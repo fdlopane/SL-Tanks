@@ -3,7 +3,11 @@
 inputs = {}
 
 inputs["WorldPop_1km_raster"] = "./input-data/lka_ppp_2020_1km_Aggregated_UNadj.tif" #1km Unconstrained Worldpop data
-
+inputs["GHSL_raw_1"] = "./input-data/GHSL/2020/GHS_SMOD_E2030_GLOBE_R2023A_54009_1000_V1_0_R8_C26.tif" # GHSL layer
+inputs["GHSL_raw_2"] = "./input-data/GHSL/2020/GHS_SMOD_E2030_GLOBE_R2023A_54009_1000_V1_0_R8_C27.tif" # GHSL layer
+inputs["GHSL_raw_3"] = "./input-data/GHSL/2020/GHS_SMOD_E2030_GLOBE_R2023A_54009_1000_V1_0_R9_C26.tif" # GHSL layer
+inputs["GHSL_raw_4"] = "./input-data/GHSL/2020/GHS_SMOD_E2030_GLOBE_R2023A_54009_1000_V1_0_R9_C27.tif" # GHSL layer
+inputs["SL_Districts"] = "./input-data/lka_admbnda_adm2_slsd_20200305.shp" # Shapefile with Sri Lanka districts
 
 outputs = {}
 
