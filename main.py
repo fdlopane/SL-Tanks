@@ -1,12 +1,13 @@
 # Sri Lanka Tank rejuvenation priority index
 # This script generates an agricultural dependent population shapefile and attributes
-# agricltural dependent population to water tanks to determine the serviced population
+# agricultural dependent population to water tanks to determine the serviced population
 # of each tank. The higher the population, the higher the priority of the tank.
 
 ########################################################################################################################
 # Import phase
 import datetime
 import pytz
+
 tz_London = pytz.timezone('Europe/London')
 now = datetime.datetime.now(tz_London)
 print("Program started at: ", now.strftime("%H:%M:%S"), "(London time)")
@@ -44,9 +45,9 @@ dist_filename = ['01_Ampara',
                  '24_Trincomalee',
                  '25_Vavuniya']
 ########################################################################################################################
-# Preprocessing of the 1km Unconstrained Worldpop data to be 100m resolution
+# Preprocessing of the 1km Unconstrained WorldPop data to be 100m resolution
 
-# Resample the Worlpop raster from 1km resolution to 100m
+# Resample the WorldPop raster from 1km resolution to 100m
 # Define inputs for resampling function:
 input_raster_path = inputs["WorldPop_1km_raster"]
 output_raster_path = Resampled_pop_raster
@@ -54,7 +55,7 @@ x_resolution = 0.0008983 # 100m in degrees
 y_resolution = 0.0008983 # 100m in degrees
 
 if not os.path.isfile(output_raster_path):
-    gcpt.resample_raster(input_raster_path, output_raster_path, x_resolution, y_resolution) # function from geocomputation module
+    gcpt.resample_raster(input_raster_path, output_raster_path, x_resolution, y_resolution)
     print("Raster resampling completed.")
 
 # Convert the 100m WoldPop raster to a point shapefile:
