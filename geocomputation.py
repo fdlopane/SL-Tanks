@@ -11,6 +11,7 @@ from rasterio.features import shapes
 import numpy as np
 import geopandas as gpd
 from shapely.geometry import Point, shape
+import os
 def resample_raster(input_path, output_path, x_resolution, y_resolution):
     """This function resamples a raster file given a new resolution."""
     # Open the input raster file
@@ -172,3 +173,21 @@ def raster_to_shp_poly(input_file, output_file, target_classes=None, dissolve=Tr
 
         dissolved_gdf.to_feather(output_file)
     else: gdf.to_feather(output_file)
+
+def split_vector_layer(input_gdf, field_name:str, output_directory):
+    """This function splits a vector layer (input GeoDtaFrame) into different polygons layers"""
+    # Group the GeoDataFrame by the specified field
+    grouped = input_gdf.groupby(field_name)
+
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+
+    for group_name, group_data in grouped:
+        # Create a GeoDataFrame for each group
+        output_gdf = gpd.GeoDataFrame(group_data)
+
+        # Define the output file path for the group
+        output_file_path = f"{output_directory}/{group_name}.shp"
+
+        # Save the group's GeoDataFrame to a shapefile
+        output_gdf.to_file(output_file_path)

@@ -108,7 +108,28 @@ if not os.path.isfile(ghsl_poly):
     print('GHSL polygon layer created.')
     print()
 
+########################################################################################################################
+# INDIVIDUAL DISTRICT FILES CREATION
 
+# Create individual district boundaries shapefiles
+# (these will be used later for populations assignment to ag lands and ind districts)
+print('Checking if individual district border shapefiles have already been created.')
+print()
+flag = True
+for y in dist_filename:
+    if not os.path.isfile(ind_dist_boundaries_filepath + y[3:]):
+        flag = False
+
+if flag == False:
+    print('Creating individual district border shapefiles...')
+    print()
+    # run individual districts polygons creation function:
+    field_name = 'ADM2_EN'
+    districts_gdf = gpd.read_file(inputs["SL_Districts"])
+    gcpt.split_vector_layer(districts_gdf, field_name, ind_dist_boundaries_filepath)
+else:
+    print('Borders already created.')
+    print()
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
