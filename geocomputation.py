@@ -77,7 +77,7 @@ def raster_to_shp_point(input_raster, output_shp, field_name:str):
     # Convert values to integers and divide by 100 (because of change of resolution):
     gdf_pop[field_name] = gdf_pop[field_name]/100
 
-    gdf_pop.to_feather(output_shp)
+    gdf_pop.to_file(output_shp)
 
     return gdf_pop
 
@@ -171,8 +171,8 @@ def raster_to_shp_poly(input_file, output_file, target_classes=None, dissolve=Tr
         dissolved_gdf.drop(columns='dissolve_id', inplace=True)  # Remove the 'dissolve_id' column (optional)
         print('Vector file dissolved into single feature.\n')
 
-        dissolved_gdf.to_feather(output_file)
-    else: gdf.to_feather(output_file)
+        dissolved_gdf.to_file(output_file)
+    else: gdf.to_file(output_file)
 
 def split_vector_layer(input_gdf, field_name:str, output_directory):
     """This function splits a vector layer (input GeoDtaFrame) into different polygons layers"""
