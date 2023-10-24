@@ -105,7 +105,13 @@ if not os.path.isfile(ghsl_merged_clipped):
 # Transform the raster GHSL layer into a polygon
 if not os.path.isfile(ghsl_poly):
     target_classes = [11, 12, 13, 21] # Target classes value to be filtered out during shp creation
-    gcpt.raster_to_shp_poly(ghsl_merged_clipped, ghsl_poly, target_classes, dissolve=True)
+    gcpt.raster_to_shp_poly(ghsl_merged_clipped, ghsl_poly, target_classes, dissolve=False)
+    print('GHSL polygon layer created.')
+    print()
+
+if not os.path.isfile(ghsl_poly_dissolved):
+    target_classes = [11, 12, 13, 21] # Target classes value to be filtered out during shp creation
+    gcpt.raster_to_shp_poly(ghsl_merged_clipped, ghsl_poly_dissolved, target_classes, dissolve=True)
     print('GHSL polygon layer created.')
     print()
 
@@ -228,10 +234,10 @@ print()
 if not os.path.isfile(pop_points_ghsl_shp):
     # Read the input shapefiles
     pop_points = gpd.read_file(pop_points_shp)
-    ghsl_merged = gpd.read_file(ghsl_poly)
+    ghsl_merged_dissolved = gpd.read_file(ghsl_poly_dissolved)
 
     # Perform the spatial join
-    joined_gdf = gpd.sjoin(pop_points, ghsl_merged, how="inner", predicate="intersects")
+    joined_gdf = gpd.sjoin(pop_points, ghsl_merged_dissolved, how="inner", predicate="intersects")
 
     # Save the result to the output shapefile
     joined_gdf.to_file(pop_points_ghsl_shp)

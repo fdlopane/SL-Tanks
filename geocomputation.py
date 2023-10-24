@@ -9,8 +9,10 @@ from rasterio.warp import calculate_default_transform, reproject, Resampling
 from rasterio.mask import mask
 from rasterio.features import shapes
 import numpy as np
+import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point, shape
+from shapely.ops import unary_union
 import os
 def resample_raster(input_path, output_path, x_resolution, y_resolution):
     """This function resamples a raster file given a new resolution."""
@@ -153,17 +155,22 @@ def raster_to_shp_poly(input_file, output_file, target_classes=None, dissolve=Tr
         transform = src.transform  # Get the transformation matrix to convert pixel coordinates to geographic coordinates
         raster_crs = src.crs
 
-    # Filter out the target class values during shape generation
-    vector_features = (shape(geom).buffer(0) for geom, val in shapes(raster_data, transform=transform) if val in target_classes)
+    # Get shapes and values from the raster
+    shapes_gen = shapes(raster_data, transform=transform)
 
-    # Create a GeoDataFrame directly from the shapes iterator
-    gdf = gpd.GeoDataFrame({'geometry': vector_features}, crs=raster_crs)
+    # Create a list of features with the 'target_class' attribute
+    features = []
+    for geom, val in shapes_gen:
+        if val in target_classes:
+            feature = {
+                'geometry': shape(geom).buffer(0),
+                'target_class': val
+            }
+            features.append(feature)
 
-    #  Fix the geometries in GeoDataFrame (resolves self-intersections, overlapping polygons, etc.)
-    gdf['geometry'] = gdf['geometry'].apply(lambda geom: shape(geom).buffer(0))
-
-    print('Raster vectorised.\n')
-
+    # Create a GeoDataFrame directly from the list of features
+    gdf = gpd.GeoDataFrame(features, crs=raster_crs)
+    
     if dissolve==True:
         # Dissolve geometries into a single feature
         gdf['dissolve_id'] = 1  # Create a new column with a constant value (ensures all dissolved into a single feature)
