@@ -183,7 +183,7 @@ flag = True
 ag_lands_dist = []
 for y in dist_filename:
     if not os.path.isfile(os.path.join(ag_lands_only_path, y[3:] + '_ag_lands_only.shp')):
-        print(os.path.join(ag_lands_only_path, y[3:] + '_ag_lands_only.shp'), "NOT FOUND")
+        #print(os.path.join(ag_lands_only_path, y[3:] + '_ag_lands_only.shp'), "NOT FOUND")
         flag = False
     ag_lands_dist.append(os.path.join(ag_lands_only_path, y[3:] + '_ag_lands_only.shp'))
 
@@ -221,7 +221,7 @@ print()
 
 # Join by attributes, summary of population points to: (a) district boundaries and (b) agricultural lands
 # Join the urban/rural information from GHSL data to the population points
-'''
+
 # Filter out urban population:
 print('Joining land types to population points...')
 print()
@@ -231,7 +231,7 @@ if not os.path.isfile(pop_points_ghsl_shp):
     ghsl_merged = gpd.read_file(ghsl_poly)
 
     # Perform the spatial join
-    joined_gdf = gpd.sjoin(pop_points, ghsl_merged, how="inner", op="intersects")
+    joined_gdf = gpd.sjoin(pop_points, ghsl_merged, how="inner", predicate="intersects")
 
     # Save the result to the output shapefile
     joined_gdf.to_file(pop_points_ghsl_shp)
@@ -239,21 +239,6 @@ if not os.path.isfile(pop_points_ghsl_shp):
     # Create a new GeoDataFrame to hold the points with coordinates
     points_with_gps = gpd.GeoDataFrame(columns=['geometry'])
 
-    # Iterate through each feature in the input GeoDataFrame
-    for index, row in joined_gdf.iterrows():
-        # Extract coordinates from the existing feature:
-        x, y = row['X'], row['Y']
-        # Create a point geometry:
-        point = Point(x, y)
-        # Add the point to the new GeoDataFrame:
-        points_with_gps = points_with_gps.append({'geometry': point}, ignore_index=True)
-
-    # Set the coordinate reference system (CRS) for the new GeoDataFrame (must match the CRS of the original data)
-    points_with_gps.crs = pop_points.crs
-
-    # Save the GeoDataFrame to a shapefile
-    points_with_gps.to_file(pop_points_ghsl_shp)
-'''
 
 '''
 # Convert the associated dbf with above to a dataframe,
