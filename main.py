@@ -239,7 +239,6 @@ if not os.path.isfile(pop_points_ghsl_shp):
     # Create a new GeoDataFrame to hold the points with coordinates
     points_with_gps = gpd.GeoDataFrame(columns=['geometry'])
 
-
 '''
 # Convert the associated dbf with above to a dataframe,
 # then create separate files that denote only the urban and only the rural pop points.
@@ -280,7 +279,6 @@ if flag == False:
                         'SUMMARIES': [5],
                         'DISCARD_NONMATCHING': False,
                         'OUTPUT': map_intermediate + 'WorldPop/ind_dists/' + y + '_rur_dist_pop.shp'})
-
 '''
 
 ########################################################################################################################
