@@ -49,7 +49,7 @@ dist_filename = ['01_Ampara',
                  '24_Trincomalee',
                  '25_Vavuniya']
 
-dist_filename = ['01_Ampara'] # light test
+#dist_filename = ['01_Ampara'] # light test
 '''
 ########################################################################################################################
 # Preprocessing of the 1km Unconstrained WorldPop data to be 100m resolution
@@ -255,18 +255,18 @@ for y in dist_filename:
         district_gdf = gpd.read_file(ind_dist_boundaries_filepath + '/' + y[3:] + '.shp')
 
         # TODO: eliminate the test file from the generated-files folder when debugged
-        # rural_points_gdf = gpd.read_file(rur_points_shp)
-        rural_points_gdf = gpd.read_file(modelRunsDir + "/TEST-pop-points.shp")
+        rural_points_gdf = gpd.read_file(rur_points_shp)
+        # rural_points_gdf = gpd.read_file(modelRunsDir + "/TEST-pop-points.shp") # debug file test
 
         # Perform the spatial join
         result_gdf = gpd.sjoin(district_gdf, rural_points_gdf, predicate='intersects', how='left')
-        result_gdf['pop_count'] = result_gdf['pop_count_'].fillna(0) # TODO: remove the underscore when debugged
+        result_gdf['pop_count'] = result_gdf['pop_count'].fillna(0) # TODO: remove the underscore when debugged
         print("debug 1")
         print(result_gdf)
         print()
 
         # Group by district and calculate the sum of 'pop_count_'
-        dissolved_gdf = result_gdf.dissolve(by='index_right', aggfunc={'pop_count_': 'sum'})
+        dissolved_gdf = result_gdf.dissolve(by='index_right', aggfunc={'pop_count': 'sum'}) # TODO: review this line. getting: pygeos.GEOSException: bad allocation
         # Reset the index to restore 'index_right' as a regular column
         dissolved_gdf = dissolved_gdf.reset_index()
         print("debug 2")
