@@ -164,7 +164,7 @@ def raster_to_shp_poly(input_file, output_file, target_classes=None, dissolve=Tr
         if val in target_classes:
             feature = {
                 'geometry': shape(geom).buffer(0),
-                'target_class': val
+                'LU_class': val
             }
             features.append(feature)
 

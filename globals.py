@@ -24,5 +24,4 @@ ghsl_poly = os.path.join(modelRunsDir,"GHSL_sl.shp") # GHSL layer polygon
 ghsl_poly_dissolved = os.path.join(modelRunsDir,"GHSL_sl_dissolved.shp") # GHSL raster in WGS84 clipped to Sri Lanka
 ag_lands = os.path.join(modelRunsDir, "ag_lands_only.shp") # Agricultural lands polygons (only agricultural lands - got rid of all other land uses)
 ag_lands_dissolved = os.path.join(modelRunsDir, "ag_lands_dissolved.shp") # Dissolved agricultural lands polygons
-pop_points_ghsl_shp = os.path.join(modelRunsDir, "WP_points_ghsl.shp") # Population point shapefile joined to GHSL layer
-rur_points_shp = os.path.join(modelRunsDir, "100m_rural_pts_2020_only.shp")# Rural population point shapefile
+rur_points_shp = os.path.join(modelRunsDir, "WP_points_ghsl.shp") # Rural population point shapefile (GHSL layer join)

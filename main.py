@@ -48,6 +48,9 @@ dist_filename = ['01_Ampara',
                  '23_Ratnapura',
                  '24_Trincomalee',
                  '25_Vavuniya']
+
+dist_filename = ['01_Ampara'] # light test
+'''
 ########################################################################################################################
 # Preprocessing of the 1km Unconstrained WorldPop data to be 100m resolution
 
@@ -231,7 +234,7 @@ print()
 # Filter out urban population:
 print('Joining land types to population points...')
 print()
-if not os.path.isfile(pop_points_ghsl_shp):
+if not os.path.isfile(rur_points_shp):
     # Read the input shapefiles
     pop_points = gpd.read_file(pop_points_shp)
     ghsl_merged_dissolved = gpd.read_file(ghsl_poly_dissolved)
@@ -240,52 +243,39 @@ if not os.path.isfile(pop_points_ghsl_shp):
     joined_gdf = gpd.sjoin(pop_points, ghsl_merged_dissolved, how="inner", predicate="intersects")
 
     # Save the result to the output shapefile
-    joined_gdf.to_file(pop_points_ghsl_shp)
-
-    # Create a new GeoDataFrame to hold the points with coordinates
-    points_with_gps = gpd.GeoDataFrame(columns=['geometry'])
-
+    joined_gdf.to_file(rur_points_shp)
 '''
-# Convert the associated dbf with above to a dataframe,
-# then create separate files that denote only the urban and only the rural pop points.
-# Then the file that denotes only the rural pop points is the one we use for all the code that comes below;
-# its simply to create a subset of the pop points of the whole country rural = codes 11,12,13 in the settlement column
-
-if not os.path.isfile(rur_points_shp):
-    # Import the dbf with geopandas
-    pop_points_ghsl_df = gpd.read_file(pop_points_ghsl_qgis_dbf)
-
-    # Create a filtered df and just keep the rural points (11, 12, 13, 21)
-    rural_points_ghsl_df = pop_points_ghsl_df.loc[pop_points_ghsl_df['land_types'].isin([11, 12, 13, 21])]
-
-    # Export the filtered rural population as a shp file
-    rural_points_ghsl_df.to_file(rur_points_shp, driver='ESRI Shapefile')
-
-# Population of districts:
-print('Checking if individual district population joins have already been conducted.')
-print()
-
 # RURAL POPULATION FILES
 flag = True
 for y in dist_filename:
-    if not os.path.isfile(map_intermediate + 'WorldPop/ind_dists/' + y + '_rur_dist_pop.shp'):
-        flag = False
-        print('Individual district rural population joins have NOT already been conducted.')
+    if not os.path.isfile(modelRunsDir + 'individual-districts/' + y[3:] + '_rur_dist_pop.shp'):
+        print('Individual district rural population joins have NOT already been conducted for', y[3:])
+        print("Joining the", y[3:], "district...")
+        # Load the district boundaries and rural points shapefiles
+        district_gdf = gpd.read_file(ind_dist_boundaries_filepath + '/' + y[3:] + '.shp')
+
+        # TODO: eliminate the test file from the generated-files folder when debugged
+        # rural_points_gdf = gpd.read_file(rur_points_shp)
+        rural_points_gdf = gpd.read_file(modelRunsDir + "/TEST-pop-points.shp")
+
+        # Perform the spatial join
+        result_gdf = gpd.sjoin(district_gdf, rural_points_gdf, predicate='intersects', how='left')
+        result_gdf['pop_count'] = result_gdf['pop_count_'].fillna(0) # TODO: remove the underscore when debugged
+        print("debug 1")
+        print(result_gdf)
         print()
 
-if flag == False:
-    print('Joining rural district populations to individual district admin boundaries...')
-    print()
-    for y in dist_filename:
-        processing.run('qgis:joinbylocationsummary',
-                       {'INPUT': ind_dist_boundaries_filepath + 'ADM2_EN_' + y[3:] + '.shp',
-                        'JOIN': rur_points_shp,
-                        'PREDICATE': [0,1,5],
-                        'JOIN_FIELDS': ['pop_count_'],
-                        'SUMMARIES': [5],
-                        'DISCARD_NONMATCHING': False,
-                        'OUTPUT': map_intermediate + 'WorldPop/ind_dists/' + y + '_rur_dist_pop.shp'})
-'''
+        # Group by district and calculate the sum of 'pop_count_'
+        dissolved_gdf = result_gdf.dissolve(by='index_right', aggfunc={'pop_count_': 'sum'})
+        # Reset the index to restore 'index_right' as a regular column
+        dissolved_gdf = dissolved_gdf.reset_index()
+        print("debug 2")
+        print(dissolved_gdf)
+        print()
+
+        # Save the result to a new shapefile
+        dissolved_gdf.to_file(ind_dists_filepath + '/' + y[3:] + '_rur_dist_pop.shp')
+
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
