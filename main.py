@@ -49,8 +49,7 @@ dist_filename = ['01_Ampara',
                  '24_Trincomalee',
                  '25_Vavuniya']
 
-# dist_filename = ['01_Ampara'] # light test
-'''
+
 ########################################################################################################################
 # Preprocessing of the 1km Unconstrained WorldPop data to be 100m resolution
 
@@ -244,7 +243,7 @@ if not os.path.isfile(rur_points_shp):
 
     # Save the result to the output shapefile
     joined_gdf.to_file(rur_points_shp)
-'''
+
 # RURAL POPULATION FILES
 flag = True
 for y in dist_filename:
@@ -254,39 +253,17 @@ for y in dist_filename:
         # Load the district boundaries and rural points shapefiles
         district_gdf = gpd.read_file(ind_dist_boundaries_filepath + '/' + y[3:] + '.shp')
 
-        # TODO: eliminate the test file from the generated-files folder when debugged
         rural_points_gdf = gpd.read_file(rur_points_shp)
-        # rural_points_gdf = gpd.read_file(modelRunsDir + "/TEST-pop-points.shp") # debug file test
 
         # Perform the spatial join
         result_gdf = gpd.sjoin(district_gdf, rural_points_gdf, predicate='intersects', how='left')
-        result_gdf['pop_count'] = result_gdf['pop_count'].fillna(0) # TODO: remove the underscore when debugged
-        # print("debug 1")
-        # print(result_gdf)
-        # print(result_gdf.columns.tolist())
-        # print()
+        result_gdf['pop_count'] = result_gdf['pop_count'].fillna(0)
 
-        # Plan B: sum the pop_count in the spatial join and number in a new field of the district_gdf
+        # Sum the pop_count in the spatial join and number in a new field of the district_gdf
         district_rural_pop = result_gdf.pop_count.sum()
-        # print(district_rural_pop)
         district_gdf['rur_pop'] = district_rural_pop
         district_gdf = district_gdf[['ADM2_EN', 'geometry', 'rur_pop']]  # Filter only the useful fields
         district_gdf.to_file(ind_dists_filepath + '/' + y[3:] + '_rur_dist_pop.shp')
-
-
-'''
-        # Group by district and calculate the sum of 'pop_count_'
-        # dissolved_gdf = result_gdf.dissolve(by='ADM2_EN', aggfunc={'pop_count': 'sum'}) # TODO: review this line. getting: pygeos.GEOSException: bad allocation
-        dissolved_gdf = result_gdf.dissolve(by='ADM2_EN', aggfunc='sum') # TODO: review this line. getting: pygeos.GEOSException: bad allocation
-        # Reset the index to restore 'index_right' as a regular column
-        # dissolved_gdf = dissolved_gdf.reset_index()
-        print("debug 2")
-        print(dissolved_gdf.columns.tolist())
-        print()
-
-        # Save the result to a new shapefile
-        dissolved_gdf.to_file(ind_dists_filepath + '/' + y[3:] + '_rur_dist_pop.shp')
-'''
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
