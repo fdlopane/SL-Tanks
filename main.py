@@ -245,14 +245,13 @@ if not os.path.isfile(rur_points_shp):
     joined_gdf.to_file(rur_points_shp)
 
 # RURAL POPULATION FILES
-flag = True
 for y in dist_filename:
     if not os.path.isfile(ind_dists_filepath + '/' + y[3:] + '_rur_dist_pop.shp'):
         print('Individual district rural population joins have NOT already been conducted for', y[3:])
         print("Joining the", y[3:], "district...")
+
         # Load the district boundaries and rural points shapefiles
         district_gdf = gpd.read_file(ind_dist_boundaries_filepath + '/' + y[3:] + '.shp')
-
         rural_points_gdf = gpd.read_file(rur_points_shp)
 
         # Perform the spatial join
@@ -264,6 +263,26 @@ for y in dist_filename:
         district_gdf['rur_pop'] = district_rural_pop
         district_gdf = district_gdf[['ADM2_EN', 'geometry', 'rur_pop']]  # Filter only the useful fields
         district_gdf.to_file(ind_dists_filepath + '/' + y[3:] + '_rur_dist_pop.shp')
+
+# TOTAL POPULATION (INCLUDING URBAN) FILES
+for y in dist_filename:
+    if not os.path.isfile(ind_dists_filepath + '/' + y[3:] + 'tot_dist_pop.shp'):
+        print('Joining district populations (total including urban) to individual district admin boundaries for', y[3:])
+        print()
+
+        # Load the district boundaries and pop points shapefiles
+        district_gdf = gpd.read_file(ind_dist_boundaries_filepath + '/' + y[3:] + '.shp')
+        pop_points_gdf = gpd.read_file(pop_points_shp)
+
+        # Perform the spatial join
+        result_gdf = gpd.sjoin(district_gdf, pop_points_gdf, predicate='intersects', how='left')
+        result_gdf['pop_count'] = result_gdf['pop_count'].fillna(0)
+
+        # Sum the pop_count in the spatial join and number in a new field of the district_gdf
+        district_pop = result_gdf.pop_count.sum()
+        district_gdf['pop_count'] = district_pop
+        district_gdf = district_gdf[['ADM2_EN', 'geometry', 'pop_count']]  # Filter only the useful fields
+        district_gdf.to_file(ind_dists_filepath + '/' + y[3:] + '_tot_dist_pop.shp')
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
