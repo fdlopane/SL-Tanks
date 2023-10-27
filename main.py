@@ -16,6 +16,7 @@ print()
 from config import *
 from globals import *
 import geocomputation as gcpt
+import pandas as pd
 import geopandas as gpd
 from shapely.geometry import Point, shape
 
@@ -49,8 +50,14 @@ dist_filename = ['01_Ampara',
                  '24_Trincomalee',
                  '25_Vavuniya']
 
+#dist_filename = ['01_Ampara'] # debug test
 
 ########################################################################################################################
+# Create the output directories if they don't exist
+for directory in [ind_dist_boundaries_filepath, ind_dists_filepath, ag_lands_only_path, buffers_path]:
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
 # Preprocessing of the 1km Unconstrained WorldPop data to be 100m resolution
 
 # Resample the WorldPop raster from 1km resolution to 100m
@@ -203,11 +210,6 @@ if flag == False:
     # dist_filenames = ["ADM2_EN_" + y[3:] for y in dist_filename]
     dist_filenames = [y[3:] for y in dist_filename]
 
-    # Create the output directories if they don't exist
-    for directory in [ind_dists_filepath, ag_lands_only_path]:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-
     # Loop through the district filenames
     for y in dist_filenames:
         # Clip the ag_lands_dissolved layer with the district boundary
@@ -305,6 +307,226 @@ for x, y in zip(ag_lands_dist, dist_filename):
         district_gdf['agland_pop'] = district_rural_pop
         district_gdf = district_gdf[['GFCODE', 'NAME_1', 'LU', 'Name', 'ag_lands', 'geometry', 'agland_pop']]  # Filter only the useful fields
         district_gdf.to_file(ind_dists_filepath + '/' + y[3:] + '_aglands_rur_pop.shp')
+
+########################################################################################################################
+# COMPARISON BETWEEN DISTRICT LEVEL STATISTICS AND GENERATED LOCAL POPULATION COUNTS
+
+threshold = 0.05 # Acceptable % difference among pop counts
+
+if not os.path.isfile(pop_count_comparison_csv):
+    # Join dataframes together at the district level so each observation is a district
+    # variables in this dataframe are:
+    # (1) district population
+    # (2) agland population
+    # (3) % agland population
+    # (4) hies estimate for ag population (%)
+    # (5) % difference between aglands population & hies
+
+    print('Starting comparison among local and global pop counts.')
+    print()
+
+    # create dataframe for population values
+    pop_df = pd.DataFrame(columns=['dist_names', 'dist_pop', 'ag_lands_pop'])
+
+    dist_names = [] # district names
+    dist_pop = [] # district total population
+    ag_lands_pop = [] # district population within agricultural lands
+    dist_rur_pop = [] # district rural population
+
+    for y in dist_filename:
+        dist_pop_rur_dbf = ind_dists_filepath + '/' + y[3:] + '_rur_dist_pop.dbf' # districts polygons dbf file path
+        t_dist_pop_rur_dbf = gpd.read_file(dist_pop_rur_dbf) # import the dbf file with geopandas
+        pdf_dist_rur_pop = pd.DataFrame(t_dist_pop_rur_dbf) # turn the geopandas object into a pandas dataframe
+        dist_names.append(pdf_dist_rur_pop['ADM2_EN'].values[0]) # append the district names to the dist_names list
+        dist_rur_pop.append(pdf_dist_rur_pop['rur_pop'].values[0])  # append the district population to the dist_pop list
+
+        ag_lands_pop_dbf = ind_dists_filepath + '/' + y[3:] + '_aglands_rur_pop.dbf' # agricultural lands polygons dbf file path
+        t_ag_lands_pop_dbf = gpd.read_file(ag_lands_pop_dbf) # import the dbf file with geopandas
+        pdf_ag_lands_pop = pd.DataFrame(t_ag_lands_pop_dbf) # turn the geopandas object into a pandas dataframe
+        #pdf_ag_lands_pop['pop_count'] = pdf_ag_lands_pop['pop_count'] # turn the population count into an integer value
+        ag_lands_pop.append(pdf_ag_lands_pop['agland_pop'].values[0]) # append the population count within agricultural lands to the ag_lands_pop list
+
+        dist_pop_dbf = ind_dists_filepath + '/' + y[3:] + '_tot_dist_pop.dbf'  # districts polygons dbf file path
+        t_dist_pop_dbf = gpd.read_file(dist_pop_dbf)  # import the dbf file with geopandas
+        pdf_dist_pop = pd.DataFrame(t_dist_pop_dbf)  # turn the geopandas object into a pandas dataframe
+        dist_pop.append(pdf_dist_pop['pop_count'].values[0])  # append the district population to the dist_pop list
+
+    # Add hies data
+    hies_df = pd.read_csv(inputs["hies_pop_csv"]) # read the aggregate (district level) agricultural dependent population from csv
+
+    # Make column with matching name
+    hies_df['dist_names'] = hies_df['ADM2_EN']
+    # Replace Numwara Eliya which has a wrong spelling with a "-" instead of a space
+    hies_df.loc[hies_df['dist_names'] == 'Nuwara-eliya', 'dist_names'] = 'Nuwara Eliya'
+
+    # Filter only the relevant columns
+    hies_df = hies_df[['dist_names', 'pop_ag_ind_or_ag_income_1plus', 'pop_ag_reliant_income']]
+
+    # Populate the pop_df with the lists from the previous loop (population counts)
+    pop_df['dist_names'] = dist_names
+    pop_df['dist_pop'] = dist_pop
+    #pop_df['dist_pop'] = pop_df['dist_pop'].astype(np.int64)
+    pop_df['dist_rur_pop'] = dist_rur_pop
+    pop_df['ag_lands_pop'] = ag_lands_pop
+
+    # join the hies data merging on district name
+    pop_df = pd.merge(pop_df, hies_df, on='dist_names', how='left')
+
+    pop_df['hies_ag_dep_pop_%'] = pop_df['pop_ag_ind_or_ag_income_1plus'] / 100  # % of agricultural dependent population - HIES data (column N) - new one to use
+
+    # Create stats on comparison between hies ag land pop
+    pop_df['aglands_pop_%'] = pop_df['ag_lands_pop'] / pop_df['dist_pop']  # Turning the population count in agricultural lands into a %
+
+    pop_df['diff_hies_aglands_%'] = pop_df['aglands_pop_%'] - pop_df['hies_ag_dep_pop_%']  # calculating difference between aggregate input data and disaggregate modelled data (column N) for agricultural lands polygons buffers
+
+    pop_df['use_aglands?'] = ''
+
+    pop_df.loc[(pop_df['diff_hies_aglands_%'] > threshold), 'use_aglands?'] = 'too big'
+    pop_df.loc[(pop_df['diff_hies_aglands_%'] < - threshold), 'use_aglands?'] = 'too small'
+
+    # Identify agricultural lands population counts whose difference aggregate/disaggregate is < 10%
+    pop_df.loc[(pop_df['diff_hies_aglands_%'] < threshold) & (pop_df['diff_hies_aglands_%'] > -threshold), 'use_aglands?'] = 'OK'
+
+    # export dataframe to excel file
+    # pop_df.to_excel(map_intermediate + 'pop_df_hies_no_hg.xlsx', index=True)
+
+    # export dataframe to csv
+    pop_df.to_csv(pop_count_comparison_csv)
+
+########################################################################################################################
+# BUFFER GENERATION
+
+# Execute the buffer creation algorithm only if the final radius dimensions csv file does not exist.
+# (i.e. if you want to regenerate all the buffers, just delete the 'agland_buffers_radii_csv' csv file)
+if not os.path.isfile(agland_buffers_radii_csv):
+    # According to the information contained in the csv file created in the previous section (comparison between global
+    # and local pop counts), different buffers will be created:
+    pop_df = pd.read_csv(pop_count_comparison_csv)
+
+    r_increment = 100 # progressive increment of buffer radius (in metres)
+
+    All_dist_pop_check = False # Check on population of all districts
+
+    # Let's create a dictionary that contains the district name as key and the final buffer radius as values
+    buffer_r_dict = {}
+    # Initialise the dictionary with zero values:
+    for y in dist_filename:
+        buffer_r_dict[y] = 0
+
+    while All_dist_pop_check==False:
+        for y in dist_filename:
+            buffer_radius = 100  # initial value in metres
+            district_pop_check = False
+            while district_pop_check == False:
+                if pop_df.loc[pop_df['dist_names'] == y[3:], 'use_aglands?'].item() == 'too small':
+                    print('Creating ' + str(buffer_radius) + 'm buffer on ag lands for district:' + y[3:])
+                    print()
+                    buffer_r_dict[y] = buffer_radius
+
+                    # Create GeoSeries
+                    aglands = gpd.read_file(ag_lands_only_path + '/' + y[3:] + '_ag_lands_only.shp')
+                    district_series = aglands['geometry']
+
+                    # Buffer creation
+                    d_buffer = district_series.buffer(buffer_radius*(0.00001 / 1.11))
+                    d_buffer.name = 'geometry'
+                    buffered_gdf = gpd.GeoDataFrame(d_buffer, crs="EPSG:4326", geometry='geometry')
+                    buffered_gdf['dist_name'] = y[3:]
+                    buffered_gdf = buffered_gdf.dissolve()
+
+                    # Clip the buffer to the district boundaries
+                    district_boundary = gpd.read_file(os.path.join(ind_dist_boundaries_filepath, y[3:] + '.shp'))
+                    clipped_buffer = gpd.clip(buffered_gdf, district_boundary)
+
+                    # Join the clipped buffer to the rural points shapefile
+                    rural_points_gdf = gpd.read_file(rur_points_shp)
+                    joined_gdf = gpd.sjoin(clipped_buffer, rural_points_gdf, predicate='intersects', how='left')
+
+                    # check value from HIES ag pop
+                    hies_pop_ag_dep = pop_df.loc[pop_df['dist_names'] == y[3:], 'hies_ag_dep_pop_%'].item()  # ag dep pop for district y
+                    # print("hies_pop_ag_dep =", hies_pop_ag_dep)
+                    hies_dist_pop = pop_df.loc[pop_df['dist_names'] == y[3:], 'dist_pop'].item()  # tot pop of district y
+                    # print("hies_dist_pop =", hies_dist_pop)
+                    dist_rur_pop = pop_df.loc[pop_df['dist_names'] == y[3:], 'dist_rur_pop'].item()  # rur pop of district y
+                    # print("dist_rur_pop =", dist_rur_pop)
+
+                    # print(joined_gdf.columns.tolist())
+                    # print(joined_gdf)
+                    buffer_pop_count = joined_gdf.pop_count.sum()
+                    # print("buffer_pop_count =", buffer_pop_count)
+
+
+                    if (buffer_pop_count / hies_dist_pop) - hies_pop_ag_dep > -threshold: # '> -threshold' means buffer ok
+                        print("buffer_pop_count / hies_dist_pop) - hies_pop_ag_dep =", (buffer_pop_count / hies_dist_pop) - hies_pop_ag_dep)
+                        # Save to file the last generated buffer
+                        buffered_gdf.to_file(buffers_path + '/' + y[3:] + '_ag_lands_' + str(buffer_radius) + 'm_buffer.shp')
+                        district_pop_check = True
+
+                    elif abs(buffer_pop_count - dist_rur_pop) < threshold:
+                        # this is the condition in which the whole rural population is already contained in the buffer
+                        # with a 5% (or different value of threshold) error acceptance
+                        district_pop_check = True
+
+                    else:  # 'difference < -threshold' means buffer too small
+                        buffer_radius = buffer_radius + r_increment
+
+                elif pop_df.loc[pop_df['dist_names'] == y[3:], 'use_aglands?'].item() == 'too big':
+                    print('Creating -' + str(buffer_radius) + 'm buffers on ag lands for district: ' + y[3:])
+                    print()
+                    buffer_r_dict[y] = (-1) * buffer_radius  # negative value = inward buffer
+
+                    # Create GeoSeries
+                    aglands = gpd.read_file(ag_lands_only_path + '/' + y[3:] + '_ag_lands_only.shp')
+                    district_series = aglands['geometry']
+
+                    # Buffer creation
+                    d_buffer = district_series.buffer((-1) * buffer_radius * (0.00001 / 1.11))
+                    d_buffer.name = 'geometry'
+                    buffered_gdf = gpd.GeoDataFrame(d_buffer, crs="EPSG:4326", geometry='geometry')
+                    buffered_gdf['dist_name'] = y[3:]
+                    buffered_gdf = buffered_gdf.dissolve()
+
+                    # Clip the buffer to the district boundaries
+                    district_boundary = gpd.read_file(rur_points_shp)
+                    clipped_buffer = gpd.clip(buffered_gdf, district_boundary)
+
+                    # Join the clipped buffer to the rural points shapefile
+                    rural_points_gdf = gpd.read_file(os.path.join(ind_dists_filepath, y[3:] + '_rur_dist_pop.shp'))
+                    joined_gdf = gpd.sjoin(clipped_buffer, rural_points_gdf, predicate='intersects', how='left')
+
+                    # check value from HIES ag pop
+                    hies_pop_ag_dep = pop_df.loc[pop_df['dist_names'] == y[3:], 'hies_ag_dep_pop_%'].item()  # ag dep pop for district y
+                    hies_dist_pop = pop_df.loc[pop_df['dist_names'] == y[3:], 'dist_pop'].item()  # tot pop of district y
+                    dist_rur_pop = pop_df.loc[pop_df['dist_names'] == y[3:], 'dist_rur_pop'].item()  # rur pop of district y
+
+                    buffer_pop_count = joined_gdf.pop_count.sum()
+
+                    if (buffer_pop_count / hies_dist_pop) - hies_pop_ag_dep < threshold:  # '< threshold' means buffer ok
+                        # Save to file the last generated buffer
+                        buffered_gdf.to_file(buffers_path + '/' + y[3:] + '_ag_lands_-' + str(buffer_radius) + 'm_buffer.shp')
+                        district_pop_check = True
+
+                    elif abs(buffer_pop_count - dist_rur_pop) < threshold:
+                        # this is the condition in which the whole rural population is already contained in the buffer
+                        district_pop_check = True
+
+                    else:  # 'difference > threshold' means buffer too big
+                        buffer_radius = buffer_radius + r_increment
+
+                elif pop_df.loc[pop_df['dist_names'] == y[3:], 'use_aglands?'].item() == 'OK':
+                    district_pop_check = True
+
+                else:
+                    raise Exception('ERROR: something went wrong! Check the values of the use_aglands? column of pop counts csv file.')
+
+        All_dist_pop_check = True
+
+    # Create Pandas data frame from dictionary (df index=district, df column=buffer radius)
+    buffer_r_df = pd.DataFrame.from_dict(buffer_r_dict, orient='index', columns=['buffer_radius'])
+    buffer_r_df['district_name'] = buffer_r_df.index  # turn index into column named 'district_name'
+    buffer_r_df.reset_index(drop=True, inplace=True)
+    # Export data frame to csv
+    buffer_r_df.to_csv(agland_buffers_radii_csv)
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)

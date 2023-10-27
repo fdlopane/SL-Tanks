@@ -9,6 +9,7 @@ inputs["GHSL_raw_3"] = "./input-data/GHSL/2020/GHS_SMOD_E2030_GLOBE_R2023A_54009
 inputs["GHSL_raw_4"] = "./input-data/GHSL/2020/GHS_SMOD_E2030_GLOBE_R2023A_54009_1000_V1_0_R9_C27.tif" # GHSL layer
 inputs["SL_Districts"] = "./input-data/lka_admbnda_adm2_slsd_20200305.shp" # Shapefile with Sri Lanka districts
 inputs["land_use"] = "./input-data/SL_LU.shp"
+inputs["hies_pop_csv"] = './input-data/HIES_agri_labor.csv' # HIES data set on agricultural labour counts per districts
 
 outputs = {}
 
