@@ -266,7 +266,7 @@ for y in dist_filename:
 
 # TOTAL POPULATION (INCLUDING URBAN) FILES
 for y in dist_filename:
-    if not os.path.isfile(ind_dists_filepath + '/' + y[3:] + 'tot_dist_pop.shp'):
+    if not os.path.isfile(ind_dists_filepath + '/' + y[3:] + '_tot_dist_pop.shp'):
         print('Joining district populations (total including urban) to individual district admin boundaries for', y[3:])
         print()
 
@@ -283,6 +283,28 @@ for y in dist_filename:
         district_gdf['pop_count'] = district_pop
         district_gdf = district_gdf[['ADM2_EN', 'geometry', 'pop_count']]  # Filter only the useful fields
         district_gdf.to_file(ind_dists_filepath + '/' + y[3:] + '_tot_dist_pop.shp')
+
+# POPULATION WITHIN AGRICULTURAL LAND FILES
+print('Checking if ag land population joins have already been conducted.')
+print()
+for x, y in zip(ag_lands_dist, dist_filename):
+    if not os.path.isfile(ind_dists_filepath + '/' + y[3:] + '_aglands_rur_pop.shp'):
+        print('Joining ag populations to individual aglands boundaries (rural only) for', y[3:])
+        print()
+
+        # Load the district boundaries and pop points shapefiles
+        district_gdf = gpd.read_file(x)
+        rural_points_gdf = gpd.read_file(rur_points_shp)
+
+        # Perform the spatial join
+        result_gdf = gpd.sjoin(district_gdf, rural_points_gdf, predicate='intersects', how='left')
+        result_gdf['pop_count'] = result_gdf['pop_count'].fillna(0)
+
+        # Sum the pop_count in the spatial join and number in a new field of the district_gdf
+        district_rural_pop = result_gdf.pop_count.sum()
+        district_gdf['agland_pop'] = district_rural_pop
+        district_gdf = district_gdf[['GFCODE', 'NAME_1', 'LU', 'Name', 'ag_lands', 'geometry', 'agland_pop']]  # Filter only the useful fields
+        district_gdf.to_file(ind_dists_filepath + '/' + y[3:] + '_aglands_rur_pop.shp')
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
