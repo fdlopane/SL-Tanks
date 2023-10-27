@@ -457,7 +457,6 @@ if not os.path.isfile(agland_buffers_radii_csv):
 
 
                     if (buffer_pop_count / hies_dist_pop) - hies_pop_ag_dep > -threshold: # '> -threshold' means buffer ok
-                        print("buffer_pop_count / hies_dist_pop) - hies_pop_ag_dep =", (buffer_pop_count / hies_dist_pop) - hies_pop_ag_dep)
                         # Save to file the last generated buffer
                         buffered_gdf.to_file(buffers_path + '/' + y[3:] + '_ag_lands_' + str(buffer_radius) + 'm_buffer.shp')
                         district_pop_check = True
@@ -487,11 +486,11 @@ if not os.path.isfile(agland_buffers_radii_csv):
                     buffered_gdf = buffered_gdf.dissolve()
 
                     # Clip the buffer to the district boundaries
-                    district_boundary = gpd.read_file(rur_points_shp)
+                    district_boundary = gpd.read_file(os.path.join(ind_dist_boundaries_filepath, y[3:] + '.shp'))
                     clipped_buffer = gpd.clip(buffered_gdf, district_boundary)
 
                     # Join the clipped buffer to the rural points shapefile
-                    rural_points_gdf = gpd.read_file(os.path.join(ind_dists_filepath, y[3:] + '_rur_dist_pop.shp'))
+                    rural_points_gdf = gpd.read_file(rur_points_shp)
                     joined_gdf = gpd.sjoin(clipped_buffer, rural_points_gdf, predicate='intersects', how='left')
 
                     # check value from HIES ag pop
