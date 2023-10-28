@@ -14,4 +14,5 @@ inputs["tanks_polygons"] = './input-data/undp_tanks_poly_silt.shp' # 11k tanks
 
 outputs = {}
 
-outputs["ag_dep_pop_shp"] = "./output-data/ag_dependent_population.shp"
+outputs["ag_dep_pop_shp"] = "./output-data/ag_dependent_population.shp" # agricultural dependent population shapefile
+outputs["tanks_buffers_pop"] = "./output-data/tanks_buffers_agpop.shp" # tank buffers with ag-dep population count

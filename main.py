@@ -585,6 +585,8 @@ if not os.path.isfile(outputs["ag_dep_pop_shp"]):
 # Create a buffer around tanks
 tank_buffer = 1000 # tank buffer in metres
 
+print('Checking if tanks buffers have already been created...')
+print()
 if not os.path.isfile(tanks_buffers):
     print('Creating tanks buffers...')
     print()
@@ -596,16 +598,40 @@ if not os.path.isfile(tanks_buffers):
     t_buffer = tanks_series.buffer(tank_buffer * (0.00001 / 1.11)) # conversion to deg
     t_buffer.name = 'geometry'
     buffered_gdf = gpd.GeoDataFrame(t_buffer, crs="EPSG:4326", geometry='geometry')
+    buffered_gdf = buffered_gdf.join(tanks_polygons.drop('geometry', axis=1))
 
     # Create a spatial index
     buffered_gdf.sindex
 
     # Save to file
     buffered_gdf.to_file(tanks_buffers)
+'''
+# Count served population by each tank (not using Voronoi split)
+print('Checking if tanks buffers population count has already been performed...')
+print()
+if not os.path.isfile(outputs["tanks_buffers_pop"]):
+    print('Counting agricultural dependent population within tanks buffers...')
+    print()
+    tanks_buffers_gdf = gpd.read_file(tanks_buffers)
+    rural_points_gdf = gpd.read_file(rur_points_shp)
+    # Perform the spatial join
+    result_gdf = gpd.sjoin(tanks_buffers_gdf, rural_points_gdf, predicate='intersects', how='left')
 
-# Count served population by each tank - NOT using Voronoi split
+    # Handle missing values in 'index_right'
+    result_gdf['index_right'].fillna(-1, inplace=True)
 
+    # Summarise the attributes based on the specified fields
+    summary_df = result_gdf.groupby('index_right')["pop_count"].agg("sum").reset_index()
 
+    # Merge the summary back into the input GeoDataFrame
+    result_gdf = tanks_buffers_gdf.merge(summary_df, left_on=tanks_buffers_gdf.index, right_on='index_right', how='left')
+
+    # Create a spatial index
+    result_gdf.sindex
+
+    # Save to file
+    result_gdf.to_file(outputs["tanks_buffers_pop"])
+'''
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
 print("Program finished at: ", now.strftime("%H:%M:%S"), "(London time)")
