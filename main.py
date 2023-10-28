@@ -576,7 +576,35 @@ if not os.path.isfile(outputs["ag_dep_pop_shp"]):
     rural_points_gdf = gpd.read_file(rur_points_shp)
     ag_lands_and_buffers_gdf = gpd.read_file(ag_lands_and_buffers)
     clipped_result = gpd.clip(rural_points_gdf, ag_lands_and_buffers_gdf)
+    clipped_result.sindex
     clipped_result.to_file(outputs["ag_dep_pop_shp"])
+
+########################################################################################################################
+# ATTRIBUTION OF AGRICULTURAL DEPENDENT POPULATION TO TANKS
+
+# Create a buffer around tanks
+tank_buffer = 1000 # tank buffer in metres
+
+if not os.path.isfile(tanks_buffers):
+    print('Creating tanks buffers...')
+    print()
+    # Create GeoSeries
+    tanks_polygons = gpd.read_file(inputs["tanks_polygons"])
+    tanks_series = tanks_polygons['geometry']
+
+    # Buffer creation
+    t_buffer = tanks_series.buffer(tank_buffer * (0.00001 / 1.11)) # conversion to deg
+    t_buffer.name = 'geometry'
+    buffered_gdf = gpd.GeoDataFrame(t_buffer, crs="EPSG:4326", geometry='geometry')
+
+    # Create a spatial index
+    buffered_gdf.sindex
+
+    # Save to file
+    buffered_gdf.to_file(tanks_buffers)
+
+# Count served population by each tank - NOT using Voronoi split
+
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)

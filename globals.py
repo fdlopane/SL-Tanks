@@ -29,3 +29,4 @@ rur_points_shp = os.path.join(modelRunsDir, "WP_points_ghsl.shp") # Rural popula
 pop_count_comparison_csv = os.path.join(modelRunsDir, "pop_df_hies.csv") # csv file contaning district level comparisons among pop counts
 agland_buffers_radii_csv = os.path.join(modelRunsDir, "agland_buffer_radii.csv") # csv file with the final buffer radius value for each district
 ag_lands_and_buffers = os.path.join(modelRunsDir, "ag_lands_and_buffers.shp") # Merged layer of all agricultural lands' buffers
+tanks_buffers = os.path.join(modelRunsDir, "tanks_buffers.shp") # Buffers around water tanks
