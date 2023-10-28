@@ -13,4 +13,4 @@ inputs["hies_pop_csv"] = './input-data/HIES_agri_labor.csv' # HIES data set on a
 
 outputs = {}
 
-outputs["Output-name"] = "./output-data/file-name.csv"
+outputs["ag_dep_pop_shp"] = "./output-data/ag_dependent_population.shp"

@@ -223,6 +223,9 @@ if flag == False:
         # Extract features with 'ag_lands' equal to 1
         ag_lands_only = clipped_result[clipped_result['ag_lands'] == 1]
 
+        # Add district name
+        ag_lands_only["dist_name"] = y
+
         # Save the selection as a separate shapefile
         ag_lands_only.to_file(os.path.join(ag_lands_only_path, y + '_ag_lands_only.shp'))
 
@@ -343,7 +346,6 @@ if not os.path.isfile(pop_count_comparison_csv):
         ag_lands_pop_dbf = ind_dists_filepath + '/' + y[3:] + '_aglands_rur_pop.dbf' # agricultural lands polygons dbf file path
         t_ag_lands_pop_dbf = gpd.read_file(ag_lands_pop_dbf) # import the dbf file with geopandas
         pdf_ag_lands_pop = pd.DataFrame(t_ag_lands_pop_dbf) # turn the geopandas object into a pandas dataframe
-        #pdf_ag_lands_pop['pop_count'] = pdf_ag_lands_pop['pop_count'] # turn the population count into an integer value
         ag_lands_pop.append(pdf_ag_lands_pop['agland_pop'].values[0]) # append the population count within agricultural lands to the ag_lands_pop list
 
         dist_pop_dbf = ind_dists_filepath + '/' + y[3:] + '_tot_dist_pop.dbf'  # districts polygons dbf file path
@@ -398,7 +400,11 @@ if not os.path.isfile(pop_count_comparison_csv):
 
 # Execute the buffer creation algorithm only if the final radius dimensions csv file does not exist.
 # (i.e. if you want to regenerate all the buffers, just delete the 'agland_buffers_radii_csv' csv file)
+print("Checking if agricultural lands' buffer already exist")
+print()
 if not os.path.isfile(agland_buffers_radii_csv):
+    print("Creating agricultural lands buffers...")
+    print()
     # According to the information contained in the csv file created in the previous section (comparison between global
     # and local pop counts), different buffers will be created:
     pop_df = pd.read_csv(pop_count_comparison_csv)
@@ -526,6 +532,51 @@ if not os.path.isfile(agland_buffers_radii_csv):
     buffer_r_df.reset_index(drop=True, inplace=True)
     # Export data frame to csv
     buffer_r_df.to_csv(agland_buffers_radii_csv)
+
+# Now let's create an agricultural dependent population layer by overlapping the rural population and the buffers
+# Read final buffer radii dimensions from csv file
+buffer_r_df = pd.read_csv(agland_buffers_radii_csv, usecols=['district_name', 'buffer_radius'])
+
+# Merge the buffers into a single layer to be overlapped to the rural pop layer
+if not os.path.isfile(ag_lands_and_buffers):
+    # Create a list of input files. Select different files according to the buffer radius
+    input_layers_list = []
+    for y in dist_filename:
+        if buffer_r_df.loc[buffer_r_df['district_name'] == y, 'buffer_radius'].item() == 0:
+            input_layers_list.append(ag_lands_only_path + '/' + y[3:] + '_ag_lands_only.shp')
+        elif buffer_r_df.loc[buffer_r_df['district_name'] == y, 'buffer_radius'].item() > 0:
+            b_r = buffer_r_df.loc[buffer_r_df['district_name'] == y, 'buffer_radius'].item() # numeric value of buffer
+            input_layers_list.append(buffers_path + '/' + y[3:] + '_ag_lands_' + str(b_r) + 'm_buffer.shp')
+        elif buffer_r_df.loc[buffer_r_df['district_name'] == y, 'buffer_radius'].item() < 0:
+            b_r = buffer_r_df.loc[buffer_r_df['district_name'] == y, 'buffer_radius'].item() # numeric value of buffer
+            input_layers_list.append(buffers_path + '/' + y[3:] + '_ag_lands_' + str(b_r) + 'm_buffer.shp')
+        else: raise Exception('ERROR: something went wrong! Check agland_buffers_radii_csv values data type.')
+
+    print('Merging buffer layers...')
+    print()
+    # Load all input shapefiles into a list of GeoDataFrames
+    input_gdfs = [gpd.read_file(layer) for layer in input_layers_list]
+
+    # Concatenate (merge) the GeoDataFrames into a single GeoDataFrame
+    merged_gdf = gpd.GeoDataFrame(pd.concat(input_gdfs, ignore_index=True), crs=input_gdfs[0].crs)
+
+    # Create a spatial index
+    merged_gdf.sindex
+
+    # Save the merged GeoDataFrame to the output shapefile
+    merged_gdf.to_file(ag_lands_and_buffers)
+    print('Merged buffers layer and spatial index created.')
+    print()
+
+# Clip the rural population to ag land + buffer layer
+print("Checking if agricultural dependent population output file already exists.")
+if not os.path.isfile(outputs["ag_dep_pop_shp"]):
+    print("Clipping rural population to agricultural lands' buffers...")
+    print()
+    rural_points_gdf = gpd.read_file(rur_points_shp)
+    ag_lands_and_buffers_gdf = gpd.read_file(ag_lands_and_buffers)
+    clipped_result = gpd.clip(rural_points_gdf, ag_lands_and_buffers_gdf)
+    clipped_result.to_file(outputs["ag_dep_pop_shp"])
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
