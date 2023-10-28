@@ -605,7 +605,7 @@ if not os.path.isfile(tanks_buffers):
 
     # Save to file
     buffered_gdf.to_file(tanks_buffers)
-'''
+
 # Count served population by each tank (not using Voronoi split)
 print('Checking if tanks buffers population count has already been performed...')
 print()
@@ -621,17 +621,32 @@ if not os.path.isfile(outputs["tanks_buffers_pop"]):
     result_gdf['index_right'].fillna(-1, inplace=True)
 
     # Summarise the attributes based on the specified fields
-    summary_df = result_gdf.groupby('index_right')["pop_count"].agg("sum").reset_index()
+    summary_df = result_gdf.groupby('Map_id')["pop_count"].agg("sum").reset_index()
+
+    print("summary df:")
+    print(summary_df)
+    print()
+    print(summary_df.columns.tolist())
+    print()
+    print("tanks_buffers_gdf")
+    print(tanks_buffers_gdf)
+    print()
+    print(tanks_buffers_gdf.columns.tolist())
 
     # Merge the summary back into the input GeoDataFrame
-    result_gdf = tanks_buffers_gdf.merge(summary_df, left_on=tanks_buffers_gdf.index, right_on='index_right', how='left')
+    result_gdf = tanks_buffers_gdf.merge(summary_df, on='Map_id', how='left')
+
+    print("result_gdf")
+    print(result_gdf)
+    print()
+    print(result_gdf.columns.tolist())
 
     # Create a spatial index
     result_gdf.sindex
 
     # Save to file
     result_gdf.to_file(outputs["tanks_buffers_pop"])
-'''
+
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
 print("Program finished at: ", now.strftime("%H:%M:%S"), "(London time)")
