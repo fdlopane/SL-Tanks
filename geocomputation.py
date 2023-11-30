@@ -1,5 +1,5 @@
 """
-This module contains a set of bespoke geocomputation function
+This module contains a set of bespoke geocomputation functions
 """
 
 import rasterio
