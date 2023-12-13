@@ -8,10 +8,12 @@
 import datetime
 import pytz
 
+
 tz_London = pytz.timezone('Europe/London')
 now = datetime.datetime.now(tz_London)
 print("Program started at: ", now.strftime("%H:%M:%S"), "(London time)")
 print()
+breakpoint
 
 from config import *
 from globals import *
@@ -590,15 +592,23 @@ print()
 if not os.path.isfile(tanks_buffers):
     print('Creating tanks buffers...')
     print()
-    # Create GeoSeries
+
     tanks_polygons = gpd.read_file(inputs["tanks_polygons"])
-    tanks_series = tanks_polygons['geometry']
+    DSD_zones = gpd.read_file(inputs["SL_DSD"])
+    # Add DSD and District level information: Perform the spatial join
+    tanks_w_dsd = gpd.sjoin(tanks_polygons, DSD_zones, predicate='intersects', how='left')
+    # Only keep fields that we need:
+    tanks_w_dsd = tanks_w_dsd[['Tank_Name', 'Map_id', 'District', 'ASC_', 'GND', 'River_B_na', 'DSD', 'Ownership',
+                               'silt_p', 'max_soil_d', 'cascade', 'renovat', 'functional', 'Shape_Leng_left',
+                               'Shape_Area_left', 'geometry', 'ADM3_EN', 'ADM3_PCODE', 'ADM2_EN', 'ADM2_PCODE']]
+    # Create GeoSeries
+    tanks_series = tanks_w_dsd['geometry']
 
     # Buffer creation
     t_buffer = tanks_series.buffer(tank_buffer * (0.00001 / 1.11)) # conversion to deg
     t_buffer.name = 'geometry'
     buffered_gdf = gpd.GeoDataFrame(t_buffer, crs="EPSG:4326", geometry='geometry')
-    buffered_gdf = buffered_gdf.join(tanks_polygons.drop('geometry', axis=1))
+    buffered_gdf = buffered_gdf.join(tanks_w_dsd.drop('geometry', axis=1))
 
     # Create a spatial index
     buffered_gdf.sindex
@@ -623,23 +633,23 @@ if not os.path.isfile(outputs["tanks_buffers_pop"]):
     # Summarise the attributes based on the specified fields
     summary_df = result_gdf.groupby('Map_id')["pop_count"].agg("sum").reset_index()
 
-    print("summary df:")
-    print(summary_df)
-    print()
-    print(summary_df.columns.tolist())
-    print()
-    print("tanks_buffers_gdf")
-    print(tanks_buffers_gdf)
-    print()
-    print(tanks_buffers_gdf.columns.tolist())
+    # print("summary df:")
+    # print(summary_df)
+    # print()
+    # print(summary_df.columns.tolist())
+    # print()
+    # print("tanks_buffers_gdf")
+    # print(tanks_buffers_gdf)
+    # print()
+    # print(tanks_buffers_gdf.columns.tolist())
 
     # Merge the summary back into the input GeoDataFrame
     result_gdf = tanks_buffers_gdf.merge(summary_df, on='Map_id', how='left')
 
-    print("result_gdf")
-    print(result_gdf)
-    print()
-    print(result_gdf.columns.tolist())
+    # print("result_gdf")
+    # print(result_gdf)
+    # print()
+    # print(result_gdf.columns.tolist())
 
     # Create a spatial index
     result_gdf.sindex

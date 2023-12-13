@@ -148,7 +148,7 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
     tanks_polygons_filtered = tanks_polygons[['Map_id', 'silt_score', 'soil_score', 'tank_supply_score', 'tank_supply_index', 'func_score']]
 
     # Create a new demand data df with only the columns we need for the following merge:
-    demand_data_filtered = demand_data[['Map_id', 'pop_count', 'norm_adp', 'norm_cov', 'demand_index']]
+    demand_data_filtered = demand_data[['Map_id', 'pop_count', 'norm_adp', 'norm_cov', 'demand_index', 'ADM3_PCODE']]
 
     # Merge this into the demand and supply index
     #two_part_index = demand_data.merge(rock_structure_filtered, on="Map_id", how='left')
@@ -157,29 +157,32 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
 
     # Now can collapse/group by DSD and District
     dsd_level = three_part_index.dissolve(
-                by='DSD',
-                aggfunc={
-                    'silt_p': "mean",
-                    'max_soil_d': "mean",
-                    'tank_supply_index': "mean",
-                    'demand_index': "mean",
-                    'n_geo_rank': "mean",
-                    'Map_id': "count"})
+                by='ADM3_PCODE',
+                aggfunc={'silt_p': "mean",
+                         'max_soil_d': "mean",
+                         'tank_supply_index': "mean",
+                         'demand_index': "mean",
+                         'n_geo_rank': "mean",
+                         'Map_id': "count"})
 
   # Create a csv with all that information for each tank id
     dsd_level.drop('geometry', axis=1).to_csv(outputs["tanks_dsd_level_csv"])
-    
-    DSD_zones = gpd.read_file(inputs["SL_DSD"])
-    DSD_zones.rename(columns={'ADM3_EN': 'DSD'}, inplace=True)
-    DSD_zones = DSD_zones[["DSD", "geometry"]]
 
-    dsd_level_filtered = dsd_level[['silt_p', 'max_soil_d', 'tank_supply_index', 'Map_id']]
+    DSD_zones = gpd.read_file(inputs["SL_DSD"])
+    DSD_zones = DSD_zones[["ADM3_PCODE", "geometry"]]
+
+    dsd_level = dsd_level.reset_index()
+    print(dsd_level.columns)
+    dsd_level_filtered = dsd_level[['silt_p', 'max_soil_d', 'tank_supply_index', 'demand_index', 'n_geo_rank', 'ADM3_PCODE', 'Map_id']]
 
     # Merge to change the output geometry
-    dsd_level = DSD_zones.merge(dsd_level_filtered, on="DSD", how='left')
+    dsd_level_ng = DSD_zones.merge(dsd_level_filtered, on='ADM3_PCODE', how='left')
+
+    # Drop the DSD areas with no tanks
+    dsd_level_ng.dropna(inplace=True)
 
     # Save to file
-    dsd_level.to_file(outputs["tanks_dsd_level"])
+    dsd_level_ng.to_file(outputs["tanks_dsd_level"])
 
     # Create a csv with all that information for each tank id
-    dsd_level.drop('geometry', axis=1).to_csv(outputs["tanks_dsd_level_csv"])
+    dsd_level_ng.drop('geometry', axis=1).to_csv(outputs["tanks_dsd_level_csv"])
