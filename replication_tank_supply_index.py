@@ -162,7 +162,12 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
                     'silt_p': "mean",
                     'max_soil_d': "mean",
                     'tank_supply_index': "mean",
+                    'demand_index': "mean",
+                    'n_geo_rank': "mean"
                     'Map_id': "count"})
+
+  # Create a csv with all that information for each tank id
+    dsd_level.drop('geometry', axis=1).to_csv(outputs["tanks_dsd_level_csv"])
 
     DSD_zones = gpd.read_file(inputs["SL_DSD"])
     DSD_zones.rename(columns={'ADM3_EN': 'DSD'}, inplace=True)
