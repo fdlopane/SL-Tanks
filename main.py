@@ -789,6 +789,9 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
     demand_data_filtered = demand_data[['Map_id', 'pop_count', 'norm_adp', 'norm_cov', 'demand_index', 'ADM3_PCODE']]
 
     # Merge this into the demand and supply index
+    # FULVIO TODO: change the 2 part index to supply and demand, then three part is with groundwater
+    # but for the three part, first explore scatter plots and clusters of supply vs. demand on tank level scores before setting cut off
+    
     #two_part_index = demand_data.merge(rock_structure_filtered, on="Map_id", how='left')
     two_part_index = rock_structure.merge(demand_data_filtered, on="Map_id", how='left')
     three_part_index = two_part_index.merge(tanks_polygons_filtered, on="Map_id", how='left')
