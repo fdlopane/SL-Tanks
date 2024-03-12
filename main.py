@@ -691,15 +691,15 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
     tanks_polygons['tank_supply_index'] = tanks_polygons.tank_supply_score / tanks_polygons.tank_supply_score.max()
 
     # Check it
-    tank_supply_table=tanks_polygons['tank_supply_index'].value_counts()
+    tank_supply_table = tanks_polygons['tank_supply_index'].value_counts()
     #print(tank_supply_table)
     #print()
 
     # Functionality score generation
     tanks_polygons['func_score'] = None
     tanks_polygons['func_score'] = np.where(tanks_polygons['functional']=="Abandoned", 0, np.nan )
-    tanks_polygons.loc[tanks_polygons['functional']== "Damaged", 'func_score']= 1
-    tanks_polygons.loc[tanks_polygons['functional']== "Functioning", 'func_score']= 2
+    tanks_polygons.loc[tanks_polygons['functional'] == "Damaged", 'func_score']= 1
+    tanks_polygons.loc[tanks_polygons['functional'] == "Functioning", 'func_score']= 2
 
     func_table = tanks_polygons['functional'].value_counts()
     #print(func_table)
@@ -780,21 +780,26 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
     rock_structure['n_geo_rank'] = rock_structure.geo_rank / rock_structure.geo_rank.max()
 
     # Create a new rock_structure df with only the columns we need for the following merge:
-    # rock_structure_filtered = rock_structure[['Map_id', 'AquName', 'pump_yield', 'geo_rank', 'n_geo_rank']]
+    rock_structure_filtered = rock_structure[['Map_id', 'AquName', 'pump_yield', 'geo_rank', 'n_geo_rank']]
 
     # Create a new tanks_polygons df with only the columns we need for the following merge:
-    tanks_polygons_filtered = tanks_polygons[['Map_id', 'silt_score', 'soil_score', 'tank_supply_score', 'tank_supply_index', 'func_score']]
+    tanks_polygons_filtered = tanks_polygons[['Map_id', 'silt_p', 'max_soil_d', 'geometry', 'silt_score', 'soil_score', 'tank_supply_score', 'tank_supply_index',  'func_score']]
 
     # Create a new demand data df with only the columns we need for the following merge:
     demand_data_filtered = demand_data[['Map_id', 'pop_count', 'norm_adp', 'norm_cov', 'demand_index', 'ADM3_PCODE']]
 
     # Merge this into the demand and supply index
-    # FULVIO TODO: change the 2 part index to supply and demand, then three part is with groundwater
+    # TODO: change the 2 part index to supply and demand, then three part is with groundwater (check new indexes with Sophie)
     # but for the three part, first explore scatter plots and clusters of supply vs. demand on tank level scores before setting cut off
-    
+
+    # OLD INDEXES (to be deleted)
     #two_part_index = demand_data.merge(rock_structure_filtered, on="Map_id", how='left')
-    two_part_index = rock_structure.merge(demand_data_filtered, on="Map_id", how='left')
-    three_part_index = two_part_index.merge(tanks_polygons_filtered, on="Map_id", how='left')
+    #two_part_index = rock_structure.merge(demand_data_filtered, on="Map_id", how='left')
+    #three_part_index = two_part_index.merge(tanks_polygons_filtered, on="Map_id", how='left')
+
+    # NEW REVISED INDEXES
+    two_part_index = tanks_polygons_filtered.merge(demand_data_filtered, on="Map_id", how='left')
+    three_part_index = two_part_index.merge(rock_structure_filtered, on="Map_id", how='left')
 
     # Now can collapse/group by DSD and District
     dsd_level = three_part_index.dissolve(
@@ -806,14 +811,10 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
                          'n_geo_rank': "mean",
                          'Map_id': "count"})
 
-  # Create a csv with all that information for each tank id
-    dsd_level.drop('geometry', axis=1).to_csv(outputs["tanks_dsd_level_csv"])
-
     DSD_zones = gpd.read_file(inputs["SL_DSD"])
     DSD_zones = DSD_zones[["ADM3_PCODE", "geometry"]]
 
     dsd_level = dsd_level.reset_index()
-    print(dsd_level.columns)
     dsd_level_filtered = dsd_level[['silt_p', 'max_soil_d', 'tank_supply_index', 'demand_index', 'n_geo_rank', 'ADM3_PCODE', 'Map_id']]
 
     # Merge to change the output geometry
