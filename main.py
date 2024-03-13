@@ -789,17 +789,11 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
     demand_data_filtered = demand_data[['Map_id', 'pop_count', 'norm_adp', 'norm_cov', 'demand_index', 'ADM3_PCODE']]
 
     # Merge this into the demand and supply index
-    # TODO: change the 2 part index to supply and demand, then three part is with groundwater (check new indexes with Sophie)
-    # but for the three part, first explore scatter plots and clusters of supply vs. demand on tank level scores before setting cut off
-
-    # OLD INDEXES (to be deleted)
-    #two_part_index = demand_data.merge(rock_structure_filtered, on="Map_id", how='left')
-    #two_part_index = rock_structure.merge(demand_data_filtered, on="Map_id", how='left')
-    #three_part_index = two_part_index.merge(tanks_polygons_filtered, on="Map_id", how='left')
-
-    # NEW REVISED INDEXES
     two_part_index = tanks_polygons_filtered.merge(demand_data_filtered, on="Map_id", how='left')
     three_part_index = two_part_index.merge(rock_structure_filtered, on="Map_id", how='left')
+
+    # Export the tank-level index to csv:
+    two_part_index.drop('geometry', axis=1).to_csv(outputs["two_part_index_tank_level"])
 
     # Now can collapse/group by DSD and District
     dsd_level = three_part_index.dissolve(
@@ -828,6 +822,8 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
 
     # Create a csv with all that information for each tank id
     dsd_level_ng.drop('geometry', axis=1).to_csv(outputs["tanks_dsd_level_csv"])
+
+    # TODO: add index creation (arithmetic mean of components)
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)
