@@ -599,7 +599,7 @@ if not os.path.isfile(tanks_buffers):
     tanks_w_dsd = gpd.sjoin(tanks_polygons, DSD_zones, predicate='intersects', how='left')
     # Only keep fields that we need:
     tanks_w_dsd = tanks_w_dsd[['Tank_Name', 'Map_id', 'District', 'ASC_', 'GND', 'River_B_na', 'DSD', 'Ownership',
-                               'silt_p', 'max_soil_d', 'cascade', 'renovat', 'functional', 'Shape_Leng_left',
+                               'silt_p', 'max_soil_d', 'cascade', 'renovat', 'functional', 'Shape_Leng_left', # Silt = 0 no silted, Silt = 1 very much silted
                                'Shape_Area_left', 'geometry', 'ADM3_EN', 'ADM3_PCODE', 'ADM2_EN', 'ADM2_PCODE']]
     # Create GeoSeries
     tanks_series = tanks_w_dsd['geometry']
