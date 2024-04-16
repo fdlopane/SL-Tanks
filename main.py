@@ -661,8 +661,9 @@ if not os.path.isfile(outputs["tanks_buffers_pop"]):
 # CREATION OF PRIORITISATION INDEX
 
 ## Joining small tanks > siltation information > rock structure > rainfall variability
-## SUPPLY SIDE INDEX CREATION ##########################################################################################
+
 if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
+    ## SUPPLY SIDE INDEX CREATION ######################################################################################
     # Input the tanks polygons
     tanks_polygons = gpd.read_file(inputs["tanks_polygons"])
 
@@ -683,7 +684,7 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
     #print()
 
     # Create the supply side index
-    tanks_polygons['tank_supply_score'] = (tanks_polygons.silt_score + tanks_polygons.soil_score)/2
+    tanks_polygons['tank_supply_score'] = tanks_polygons.silt_score * tanks_polygons.soil_score
     #print(tanks_polygons['tank_supply_score'])
     #print()
 
@@ -704,9 +705,6 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
     func_table = tanks_polygons['functional'].value_counts()
     #print(func_table)
     #print()
-
-    # TODO: Add in a regression or scatter plot against the functionality score (as a validation)
-    # justification as being about using a more objective measure
 
     ## DEMAND SIDE INDEX CREATION ######################################################################################
 
