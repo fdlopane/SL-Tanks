@@ -662,7 +662,7 @@ if not os.path.isfile(outputs["tanks_buffers_pop"]):
 
 ## Joining small tanks > siltation information > rock structure > rainfall variability
 
-if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
+if not os.path.isfile(outputs["three_part_index_tank_level"]):
     ## SUPPLY SIDE INDEX CREATION ######################################################################################
     # Input the tanks polygons
     tanks_polygons = gpd.read_file(inputs["tanks_polygons"])
@@ -786,42 +786,71 @@ if not os.path.isfile(outputs["tanks_dsd_level_csv"]):
     # Create a new demand data df with only the columns we need for the following merge:
     demand_data_filtered = demand_data[['Map_id', 'pop_count', 'norm_adp', 'norm_cov', 'demand_index', 'ADM3_PCODE']]
 
-    # Merge this into the demand and supply index
-    two_part_index = tanks_polygons_filtered.merge(demand_data_filtered, on="Map_id", how='left')
-    three_part_index = two_part_index.merge(rock_structure_filtered, on="Map_id", how='left')
+    ## COMBINED INDEX CREATION #########################################################################################
 
-    # Export the tank-level index to csv:
-    two_part_index.drop('geometry', axis=1).to_csv(outputs["two_part_index_tank_level"])
+    # Merge this into one df with both demand and supply information
+    tanks_polygons_filtered = tanks_polygons_filtered.merge(demand_data_filtered, on="Map_id", how='left')
 
-    # Now can collapse/group by DSD and District
-    dsd_level = three_part_index.dissolve(
+    # Create the supply*demand prioritisation index:
+    tanks_polygons_filtered['Comb_index_supply_demand'] = tanks_polygons_filtered.demand_index * tanks_polygons_filtered.tank_supply_index
+
+    # Identify the top XXX% Comb_index_supply_demand scoring tanks
+    selection = 0.1 # top 10%
+
+    # Filter the df and only keep the selection:
+    tanks_polygons_filtered['Rank'] = tanks_polygons_filtered.Comb_index_supply_demand.rank(method='max', ascending=False).astype(int)
+    top_tanks = tanks_polygons_filtered.sort_values('Rank', ascending=False).head(int(selection * tanks_polygons_filtered.shape[0]))
+
+    # Merge the df with the rock structure one:
+    top_tanks = top_tanks.merge(rock_structure_filtered, on="Map_id", how='left')
+
+    # Apply the groundwater recharge (GWR) potential prioritisation on top of the supply*demand index:
+    top_tanks['Comb_index_GWR'] = top_tanks.Comb_index_supply_demand * top_tanks.geo_rank
+
+    # Now we can collapse/group by DSD and District
+    dsd_level_two_part = tanks_polygons_filtered.dissolve(
                 by='ADM3_PCODE',
-                aggfunc={'silt_p': "mean",
-                         'max_soil_d': "mean",
-                         'tank_supply_index': "mean",
-                         'demand_index': "mean",
-                         'n_geo_rank': "mean",
+                aggfunc={'Comb_index_supply_demand': "mean",
                          'Map_id': "count"})
+
+    dsd_level_GWR = top_tanks.dissolve(
+        by='ADM3_PCODE',
+        aggfunc={'Comb_index_GWR': "mean",
+                 'Map_id': "count"})
 
     DSD_zones = gpd.read_file(inputs["SL_DSD"])
     DSD_zones = DSD_zones[["ADM3_PCODE", "geometry"]]
 
-    dsd_level = dsd_level.reset_index()
-    dsd_level_filtered = dsd_level[['silt_p', 'max_soil_d', 'tank_supply_index', 'demand_index', 'n_geo_rank', 'ADM3_PCODE', 'Map_id']]
+    dsd_level_two_part = dsd_level_two_part.reset_index()
+    dsd_level_GWR = dsd_level_GWR.reset_index()
+
+    dsd_level_two_part_filtered = dsd_level[['two_part_index_tank_level', 'ADM3_PCODE', 'Map_id']]
+    dsd_level_GWR_filtered = dsd_level[['three_part_index_tank_level', 'ADM3_PCODE', 'Map_id']]
 
     # Merge to change the output geometry
-    dsd_level_ng = DSD_zones.merge(dsd_level_filtered, on='ADM3_PCODE', how='left')
+    dsd_level_two_part_ng = DSD_zones.merge(dsd_level_two_part_filtered, on='ADM3_PCODE', how='left')
+    dsd_level_GWR_ng = DSD_zones.merge(dsd_level_GWR_filtered, on='ADM3_PCODE', how='left')
 
     # Drop the DSD areas with no tanks
-    dsd_level_ng.dropna(inplace=True)
+    dsd_level_two_part_ng.dropna(inplace=True)
+    dsd_level_GWR_ng.dropna(inplace=True)
 
-    # Save to file
-    dsd_level_ng.to_file(outputs["tanks_dsd_level"])
+    ## EXPORT FILES CREATION ###########################################################################################
+    # Save the DSD level geodataframes to file
+    dsd_level_two_part_ng.to_file(outputs["tanks_two_part_dsd_level"])
+    dsd_level_GWR_ng.to_file(outputs["tanks_GWR_dsd_level"])
 
-    # Create a csv with all that information for each tank id
-    dsd_level_ng.drop('geometry', axis=1).to_csv(outputs["tanks_dsd_level_csv"])
+    # Create a csv with the DSD level aggregate information
+    dsd_level_two_part_ng.drop('geometry', axis=1).to_csv(outputs["tanks_two_part_dsd_level_csv"])
+    dsd_level_GWR_ng.drop('geometry', axis=1).to_csv(outputs["tanks_GWR_dsd_level_csv"])
 
-    # TODO: add index creation (arithmetic mean of components)
+    # Export the tank-level dataframes to csv
+    two_part_index.drop('geometry', axis=1).to_csv(outputs["two_part_index_tank_level_csv"])
+    top_tanks.drop('geometry', axis=1).to_csv(outputs["three_part_index_tank_level_csv"])
+
+    # Save to file the tank-level indexes dataframes
+    two_part_index.to_file(outputs["tanks_two_part_dsd_level"])
+    top_tanks.to_file(outputs["three_part_index_tank_level"])
 
 ########################################################################################################################
 now = datetime.datetime.now(tz_London)

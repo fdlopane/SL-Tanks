@@ -18,6 +18,11 @@ outputs = {}
 
 outputs["ag_dep_pop_shp"] = "./output-data/ag_dependent_population.shp" # agricultural dependent population shapefile
 outputs["tanks_buffers_pop"] = "./output-data/tanks_buffers_agpop.shp" # tank buffers with ag-dep population count
-outputs["tanks_dsd_level"] = "./output-data/tanks_index_values_dsd.shp" # DSD polygons with index values
-outputs["tanks_dsd_level_csv"] = "./output-data/index_values_dsd.csv" # DSD level index values
-outputs["two_part_index_tank_level"] = "./output-data/index_two_part_tank_level.csv" # Two part index values at tank level
+outputs["tanks_two_part_dsd_level"] = "./output-data/two_part_index_values_dsd.shp" # DSD polygons with index values
+outputs["tanks_GWR_dsd_level"] = "./output-data/GWR_index_values_dsd.shp" # DSD polygons with index values
+outputs["tanks_two_part_dsd_level_csv"] = "./output-data/two_part_index_values_dsd.csv" # DSD level index values
+outputs["tanks_GWR_dsd_level_csv"] = "./output-data/GWR_index_values_dsd.csv" # DSD level index values
+outputs["two_part_index_tank_level_csv"] = "./output-data/index_two_part_tank_level.csv" # Two part index values at tank level
+outputs["three_part_index_tank_level_csv"] = "./output-data/index_three_part_tank_level.csv" # Two part index values at tank level
+outputs["two_part_index_tank_level"] = "./output-data/index_two_part_tank_level.shp" # DSD polygons with index values
+outputs["three_part_index_tank_level"] = "./output-data/index_three_part_tank_level.shp" # DSD polygons with index values
