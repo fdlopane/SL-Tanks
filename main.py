@@ -824,8 +824,8 @@ if not os.path.isfile(outputs["three_part_index_tank_level"]):
     dsd_level_two_part = dsd_level_two_part.reset_index()
     dsd_level_GWR = dsd_level_GWR.reset_index()
 
-    dsd_level_two_part_filtered = dsd_level[['two_part_index_tank_level', 'ADM3_PCODE', 'Map_id']]
-    dsd_level_GWR_filtered = dsd_level[['three_part_index_tank_level', 'ADM3_PCODE', 'Map_id']]
+    dsd_level_two_part_filtered = dsd_level_two_part[['Comb_index_supply_demand', 'ADM3_PCODE', 'Map_id']]
+    dsd_level_GWR_filtered = dsd_level_GWR[['Comb_index_GWR', 'ADM3_PCODE', 'Map_id']]
 
     # Merge to change the output geometry
     dsd_level_two_part_ng = DSD_zones.merge(dsd_level_two_part_filtered, on='ADM3_PCODE', how='left')
@@ -845,11 +845,11 @@ if not os.path.isfile(outputs["three_part_index_tank_level"]):
     dsd_level_GWR_ng.drop('geometry', axis=1).to_csv(outputs["tanks_GWR_dsd_level_csv"])
 
     # Export the tank-level dataframes to csv
-    two_part_index.drop('geometry', axis=1).to_csv(outputs["two_part_index_tank_level_csv"])
+    tanks_polygons_filtered.drop('geometry', axis=1).to_csv(outputs["two_part_index_tank_level_csv"])
     top_tanks.drop('geometry', axis=1).to_csv(outputs["three_part_index_tank_level_csv"])
 
     # Save to file the tank-level indexes dataframes
-    two_part_index.to_file(outputs["tanks_two_part_dsd_level"])
+    tanks_polygons_filtered.to_file(outputs["tanks_two_part_dsd_level"])
     top_tanks.to_file(outputs["three_part_index_tank_level"])
 
 ########################################################################################################################
