@@ -849,7 +849,7 @@ if not os.path.isfile(outputs["three_part_index_tank_level"]):
     top_tanks.drop('geometry', axis=1).to_csv(outputs["three_part_index_tank_level_csv"])
 
     # Save to file the tank-level indexes dataframes
-    tanks_polygons_filtered.to_file(outputs["tanks_two_part_dsd_level"])
+    tanks_polygons_filtered.to_file(outputs["two_part_index_tank_level"])
     top_tanks.to_file(outputs["three_part_index_tank_level"])
 
 ########################################################################################################################
