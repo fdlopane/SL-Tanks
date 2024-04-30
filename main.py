@@ -689,10 +689,10 @@ if not os.path.isfile(outputs["three_part_index_tank_level"]):
     #print()
 
     # Normalise
-    tanks_polygons['tank_supply_index'] = tanks_polygons.tank_supply_score / tanks_polygons.tank_supply_score.max()
+    tanks_polygons['supply_index'] = tanks_polygons.tank_supply_score / tanks_polygons.tank_supply_score.max()
 
     # Check it
-    tank_supply_table = tanks_polygons['tank_supply_index'].value_counts()
+    tank_supply_table = tanks_polygons['supply_index'].value_counts()
     #print(tank_supply_table)
     #print()
 
@@ -781,7 +781,7 @@ if not os.path.isfile(outputs["three_part_index_tank_level"]):
     rock_structure_filtered = rock_structure[['Map_id', 'AquName', 'pump_yield', 'geo_rank', 'n_geo_rank']]
 
     # Create a new tanks_polygons df with only the columns we need for the following merge:
-    tanks_polygons_filtered = tanks_polygons[['Map_id', 'silt_p', 'max_soil_d', 'geometry', 'silt_score', 'soil_score', 'tank_supply_score', 'tank_supply_index',  'func_score']]
+    tanks_polygons_filtered = tanks_polygons[['Map_id', 'silt_p', 'max_soil_d', 'geometry', 'silt_score', 'soil_score', 'tank_supply_score', 'supply_index',  'func_score']]
 
     # Create a new demand data df with only the columns we need for the following merge:
     demand_data_filtered = demand_data[['Map_id', 'pop_count', 'norm_adp', 'norm_cov', 'demand_index', 'ADM3_PCODE']]
@@ -792,30 +792,33 @@ if not os.path.isfile(outputs["three_part_index_tank_level"]):
     tanks_polygons_filtered = tanks_polygons_filtered.merge(demand_data_filtered, on="Map_id", how='left')
 
     # Create the supply*demand prioritisation index:
-    tanks_polygons_filtered['Comb_index_supply_demand'] = tanks_polygons_filtered.demand_index * tanks_polygons_filtered.tank_supply_index
+    tanks_polygons_filtered['SuppDem_index'] = tanks_polygons_filtered.demand_index * tanks_polygons_filtered.supply_index
 
-    # Identify the top XXX% Comb_index_supply_demand scoring tanks
+    # Identify the top XXX% SuppDem_index scoring tanks
     selection = 0.1 # top 10%
 
     # Filter the df and only keep the selection:
-    tanks_polygons_filtered['Rank'] = tanks_polygons_filtered.Comb_index_supply_demand.rank(method='max', ascending=False).astype(int)
+    tanks_polygons_filtered['Rank'] = tanks_polygons_filtered.SuppDem_index.rank(method='max', ascending=False).astype(int)
     top_tanks = tanks_polygons_filtered.sort_values('Rank', ascending=False).head(int(selection * tanks_polygons_filtered.shape[0]))
 
     # Merge the df with the rock structure one:
     top_tanks = top_tanks.merge(rock_structure_filtered, on="Map_id", how='left')
 
     # Apply the groundwater recharge (GWR) potential prioritisation on top of the supply*demand index:
-    top_tanks['Comb_index_GWR'] = top_tanks.Comb_index_supply_demand * top_tanks.geo_rank
+    top_tanks['GWR_Comb_index'] = top_tanks.SuppDem_index * top_tanks.geo_rank
+    top_tanks.GWR_Comb_index = top_tanks.GWR_Comb_index.astype(float)
 
     # Now we can collapse/group by DSD and District
     dsd_level_two_part = tanks_polygons_filtered.dissolve(
                 by='ADM3_PCODE',
-                aggfunc={'Comb_index_supply_demand': "mean",
+                aggfunc={'demand_index': "mean",
+                         'supply_index': "mean",
+                         'SuppDem_index': "mean",
                          'Map_id': "count"})
 
     dsd_level_GWR = top_tanks.dissolve(
         by='ADM3_PCODE',
-        aggfunc={'Comb_index_GWR': "mean",
+        aggfunc={'GWR_Comb_index': "mean",
                  'Map_id': "count"})
 
     DSD_zones = gpd.read_file(inputs["SL_DSD"])
@@ -824,8 +827,8 @@ if not os.path.isfile(outputs["three_part_index_tank_level"]):
     dsd_level_two_part = dsd_level_two_part.reset_index()
     dsd_level_GWR = dsd_level_GWR.reset_index()
 
-    dsd_level_two_part_filtered = dsd_level_two_part[['Comb_index_supply_demand', 'ADM3_PCODE', 'Map_id']]
-    dsd_level_GWR_filtered = dsd_level_GWR[['Comb_index_GWR', 'ADM3_PCODE', 'Map_id']]
+    dsd_level_two_part_filtered = dsd_level_two_part[['demand_index', 'supply_index', 'SuppDem_index', 'ADM3_PCODE', 'Map_id']]
+    dsd_level_GWR_filtered = dsd_level_GWR[['GWR_Comb_index', 'ADM3_PCODE', 'Map_id']]
 
     # Merge to change the output geometry
     dsd_level_two_part_ng = DSD_zones.merge(dsd_level_two_part_filtered, on='ADM3_PCODE', how='left')
