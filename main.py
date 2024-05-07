@@ -799,7 +799,7 @@ if not os.path.isfile(outputs["three_part_index_tank_level"]):
 
     # Filter the df and only keep the selection:
     tanks_polygons_filtered['Rank'] = tanks_polygons_filtered.SuppDem_index.rank(method='max', ascending=False).astype(int)
-    top_tanks = tanks_polygons_filtered.sort_values('Rank', ascending=False).head(int(selection * tanks_polygons_filtered.shape[0]))
+    top_tanks = tanks_polygons_filtered.sort_values('Rank').head(int(selection * tanks_polygons_filtered.shape[0]))
 
     # Merge the df with the rock structure one:
     top_tanks = top_tanks.merge(rock_structure_filtered, on="Map_id", how='left')
